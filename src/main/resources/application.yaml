@@ -1,0 +1,10 @@
+spring:
+  application:
+    name: elevator
+
+elevator:
+  number-of-floors: 10
+  elevators:
+    - StandardCar
+    - StandardCar
+    - StandardCar

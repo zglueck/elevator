@@ -1,11 +1,13 @@
 package zone.glueck.elevator.api;
 
+import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyEmitter;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import zone.glueck.elevator.api.models.*;
 import zone.glueck.elevator.events.CarStateEvent;
@@ -15,7 +17,9 @@ import zone.glueck.elevator.events.ServiceRequestEvent;
 import zone.glueck.elevator.service.ElevatorService;
 
 import java.io.IOException;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CopyOnWriteArraySet;
 
 @RestController
 public class ElevatorController {
@@ -24,11 +28,11 @@ public class ElevatorController {
 
     private final ElevatorService elevatorService;
 
-    private final SseEmitter sseEmitter;
+    private final Set<SseEmitter> sseEmitters;
 
     public ElevatorController(ElevatorService elevatorService) throws IOException {
         this.elevatorService = elevatorService;
-        this.sseEmitter = new SseEmitter(-1L);
+        this.sseEmitters = new CopyOnWriteArraySet<>();
 
         initPushNotification();
     }
@@ -37,21 +41,30 @@ public class ElevatorController {
         elevatorService.addRiderCueListener(riderCueEvent -> {
             log.info("publishing rider cue event: {}", riderCueEvent);
             final var riderCue = toModel(riderCueEvent);
-            try {
-                sseEmitter.send(riderCue, MediaType.APPLICATION_JSON);
-            } catch (IOException ex) {
-                log.error("failed to send cue event: {}", riderCueEvent, ex);
-            }
+            sseEmitters.forEach(sseEmitter -> {
+                try {
+                    sseEmitter.send(riderCue, MediaType.APPLICATION_JSON);
+                } catch (IOException ex) {
+                    log.error("failed to send cue event: {}", riderCueEvent, ex);
+                }
+            });
         });
         elevatorService.addCarStateListener(carStateEvent -> {
             log.info("publishing elevator state event: {}", carStateEvent);
             final var carState = toModel(carStateEvent);
-            try {
-                sseEmitter.send(carState, MediaType.APPLICATION_JSON);
-            } catch (IOException ex) {
-                log.error("failed to send car event: {}", carStateEvent, ex);
-            }
+            sseEmitters.forEach(sseEmitter -> {
+                try {
+                    sseEmitter.send(carState, MediaType.APPLICATION_JSON);
+                } catch (IOException ex) {
+                    log.error("failed to send car event: {}", carStateEvent, ex);
+                }
+            });
         });
+    }
+
+    @PreDestroy
+    public void destroy() {
+        sseEmitters.forEach(ResponseBodyEmitter::complete);
     }
 
     @GetMapping("/configuration")
@@ -88,6 +101,8 @@ public class ElevatorController {
 
     @GetMapping("/service/events")
     public SseEmitter registerServiceListener() {
+        final var sseEmitter = new SseEmitter(-1L);
+        sseEmitters.add(sseEmitter);
         return sseEmitter;
     }
 

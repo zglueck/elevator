@@ -70,9 +70,12 @@ Controller->>Web UI: Cue Rider Input
 2. The `StandardCar` will attempt to honor additional service requests as long as they match the direction of the initial service request and the origination floor has not been passed by.
 3. The `ExpressCar` honors only one service request at a time and will travel to all of the floor requests before accepting a new service request.
 4. The cars will wait *forever* for a user to put in a floor request, probably a bad idea.
+5. The webpage is loaded on a fresh restart of the application, there is built-in frontend state assumptions of the backend data :grimacing
+6. Only one webpage may view at a time, there are some elevator button/door state mis-matches when multiple pages have the webpage visible
 
 ### Future Features
 
+- Better initialization state page startup and button/door state management so multiple users can access the Web UI at the same time.
 - Round Robin or Nearest Elevator Car Selection - currently the list is traversed from first to last, so inevitably the first car gets more requests.
 - More Tests
 - Better Status Reporting

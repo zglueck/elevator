@@ -11,9 +11,19 @@ import java.time.Instant;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-import static zone.glueck.elevator.cars.QueueCheckingDelayableCar.State.MOVING;
+import static zone.glueck.elevator.cars.EventPublisherCar.State.MOVING;
 
-public abstract class QueueCheckingDelayableCar implements Car {
+/**
+ * An incomplete implementation of the {@link Car} interface. This augmentation provides several key functionalities
+ * that could be shared amount concrete implementations:
+ * <ul>
+ *     <li>Event Publication for {@link RiderCueEvent} and {@link CarStateEvent}</li>
+ *     <li>Management of the {@link EventPublisherCar#currentFloor} and {@link EventPublisherCar#state}</li>
+ *     <li>Automatic Service Request Queue checks when state goes available</li>
+ *     <li>Adds "realistic" duration to elevator operations, like moving between floors</li>
+ * </ul>
+ */
+public abstract class EventPublisherCar implements Car {
 
     protected static final Duration PER_FLOOR_MOVE_DURATION = Duration.ofSeconds(3L);
 
@@ -32,7 +42,7 @@ public abstract class QueueCheckingDelayableCar implements Car {
 
     protected int currentFloor = 0;
 
-    public QueueCheckingDelayableCar(ThreadPoolTaskScheduler taskScheduler) {
+    public EventPublisherCar(ThreadPoolTaskScheduler taskScheduler) {
         this.taskScheduler = taskScheduler;
     }
 

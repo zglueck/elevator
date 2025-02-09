@@ -18,7 +18,7 @@ import java.util.TreeMap;
  * A "Standard" Elevator car that accepts additional service requests as long as they are for the same direction and
  * haven't been passed by yet.
  */
-public class StandardCar extends QueueCheckingDelayableCar {
+public class StandardCar extends EventPublisherCar {
 
     private static final Logger log = LoggerFactory.getLogger(StandardCar.class);
 

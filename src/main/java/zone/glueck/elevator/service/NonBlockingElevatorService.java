@@ -5,7 +5,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.lang.NonNull;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import zone.glueck.elevator.cars.QueueCheckingDelayableCar;
+import zone.glueck.elevator.cars.EventPublisherCar;
 import zone.glueck.elevator.configs.UserDefinedElevatorConfiguration;
 import zone.glueck.elevator.cars.Car;
 import zone.glueck.elevator.events.CarStateEvent;
@@ -40,7 +40,7 @@ public class NonBlockingElevatorService implements ElevatorService {
         this.cars.addAll(cars);
 
         this.cars.forEach(car -> {
-            if (car instanceof QueueCheckingDelayableCar queuedCar) {
+            if (car instanceof EventPublisherCar queuedCar) {
                 queuedCar.setServiceRequestSupplier(pendingServiceRequests::poll);
                 queuedCar.setRiderCueEventConsumer(this::processRiderCue);
                 queuedCar.setCarStateEventConsumer(this::processCarState);

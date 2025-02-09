@@ -13,7 +13,7 @@ import java.time.Instant;
 import java.util.Comparator;
 import java.util.TreeSet;
 
-public class ExpressCar extends QueueCheckingDelayableCar {
+public class ExpressCar extends EventPublisherCar {
 
     private static final Logger log = LoggerFactory.getLogger(ExpressCar.class);
 

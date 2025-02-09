@@ -8,7 +8,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import zone.glueck.elevator.events.CarStateEvent;
 import zone.glueck.elevator.events.FloorsRequestEvent;
 import zone.glueck.elevator.events.ServiceRequestEvent;
@@ -25,20 +24,20 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static zone.glueck.elevator.cars.QueueCheckingDelayableCar.State.AVAILABLE;
-import static zone.glueck.elevator.cars.QueueCheckingDelayableCar.State.MOVING;
+import static zone.glueck.elevator.cars.EventPublisherCar.State.AVAILABLE;
+import static zone.glueck.elevator.cars.EventPublisherCar.State.MOVING;
 
 @ExtendWith(MockitoExtension.class)
-class QueueCheckingDelayableCarTest {
+class EventPublisherCarTest {
 
     /**
      * NoOp concrete implementation so we can validate the behavior associated with this abstract class.
      */
-    private static class TestQueueCheckingDelayableCar extends QueueCheckingDelayableCar {
+    private static class TestEventPublisherCar extends EventPublisherCar {
 
         private int processRequests;
 
-        public TestQueueCheckingDelayableCar(ThreadPoolTaskScheduler taskScheduler) {
+        public TestEventPublisherCar(ThreadPoolTaskScheduler taskScheduler) {
             super(taskScheduler);
         }
 
@@ -73,11 +72,11 @@ class QueueCheckingDelayableCarTest {
     @Mock
     private Consumer<CarStateEvent> carStateEventConsumer;
 
-    private QueueCheckingDelayableCar car;
+    private EventPublisherCar car;
 
     @BeforeEach
     void setUp() {
-        car = new TestQueueCheckingDelayableCar(taskScheduler);
+        car = new TestEventPublisherCar(taskScheduler);
         car.setServiceRequestSupplier(serviceRequestEventSupplier);
         car.setCarStateEventConsumer(carStateEventConsumer);
         car.currentFloor = 1;
@@ -105,7 +104,7 @@ class QueueCheckingDelayableCarTest {
 
         car.changeState(AVAILABLE);
 
-        assertThat(((TestQueueCheckingDelayableCar) car).processRequests).isEqualTo(1);
+        assertThat(((TestEventPublisherCar) car).processRequests).isEqualTo(1);
 
         final var carStateCaptor = ArgumentCaptor.forClass(CarStateEvent.class);
         verify(carStateEventConsumer).accept(carStateCaptor.capture());

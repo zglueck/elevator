@@ -44,6 +44,7 @@ The operation should be similar to real-world elevators.
 ServiceRequestEvent's that cannot be scheduled to a specific car go into a queue that will automatically be checked once
 a car becomes available.
 
+```mermaid
 sequenceDiagram
 Web UI->>Controller: What is the elevator configuration?
 Controller->>Web UI: Number of floors and elevators
@@ -56,6 +57,7 @@ Elevator Service-->Controller: Car State Update: Car Moving
 Controller-->Web UI: Car Moving
 Elevator Service-->Controller: Car Arrived, Need Rider Input
 Controller-->Web UI: Cue Rider Input
+```
 
 ### Notes
 

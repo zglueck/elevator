@@ -93,7 +93,11 @@ public class StandardCar extends QueueCheckingDelayableCar {
             }
         }
 
-        moveTo(stops.firstKey());
+        if (stops.isEmpty()) {
+            changeState(State.AVAILABLE);
+        } else {
+            moveTo(stops.firstKey());
+        }
 
         return true;
     }

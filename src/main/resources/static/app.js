@@ -8,7 +8,7 @@ function IndividualState({label, status, floor}) {
         <div className='elevator'>
             <h5>{label}</h5>
             <div>Status: {status}</div>
-            <div>Floor: {floor}</div>
+            <div>{'MOVING' === status ? 'Moving to ' : ''}Floor: {floor}</div>
         </div>
     );
 }
@@ -31,8 +31,18 @@ function Elevator({name, riderCue, submitInput, clearButton}) {
     function handleClick() {
         if (floorsRef != null && floorsRef.current != null) {
             // attempt to parse and submit
-            const floors = floorsRef.current.value.split(',').map(s => s.trim()).map(s => Number(s));
+            let floors = floorsRef.current.value.split(',').map(s => s.trim()).map(s => Number(s));
             console.log(floors);
+
+            // remove requests for floors not going the correct way (don't you hate those people?)
+            floors = floors.filter(floor => {
+                if ('ASCENDING' === riderCue.serviceRequest.direction) {
+                    return floor > riderCue.serviceRequest.originationFloor;
+                } else {
+                    return floor < riderCue.serviceRequest.originationFloor;
+                }
+            })
+
             clearButton(riderCue.serviceRequest.direction);
             submitInput({
                 riderServiceRequest: riderCue.serviceRequest,

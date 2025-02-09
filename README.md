@@ -51,12 +51,12 @@ Controller->>Web UI: Number of floors and elevators
 Web UI->>Controller: Register for Rider and Car Events
 Web UI->>Controller: Service Requested to floor two
 Controller->>Web UI: Service Request Information
-Note right of Controller: Asynchronously hand of service information and API returns immediately
+Note over Controller: Asynchronously hand off service information and API returns immediately
 Controller->>Elevator Service: Car Requested to floor two
-Elevator Service-->Controller: Car State Update: Car Moving
-Controller-->Web UI: Car Moving
-Elevator Service-->Controller: Car Arrived, Need Rider Input
-Controller-->Web UI: Cue Rider Input
+Elevator Service->>Controller: Car State Update: Car Moving
+Controller->>Web UI: Car Moving
+Elevator Service->>Controller: Car Arrived, Need Rider Input
+Controller->>Web UI: Cue Rider Input
 ```
 
 ### Notes
@@ -74,6 +74,6 @@ Controller-->Web UI: Cue Rider Input
 ### Future Features
 
 - Round Robin or Nearest Elevator Car Selection - currently the list is traversed from first to last, so inevitably the first car gets more requests.
-- Testing
+- More Tests
 - Better Status Reporting
 - App Based Service Requests (set a time and floor for an elevator to be available!)

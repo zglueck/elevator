@@ -31,6 +31,7 @@ public class ExpressCar extends QueueCheckingDelayableCar {
     @Override
     protected void arrived() {
         log.info("car: {} arrived at floor: {}", getCarId(), currentFloor);
+        stops.remove(currentFloor);
         if (currentFloor != serviceRequestEvent.originationFloor()) {
             // just letting people off
             stops.remove(currentFloor);

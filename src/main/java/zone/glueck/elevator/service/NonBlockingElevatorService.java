@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import zone.glueck.elevator.cars.QueueCheckingDelayableCar;
 import zone.glueck.elevator.configs.UserDefinedElevatorConfiguration;
 import zone.glueck.elevator.cars.Car;
+import zone.glueck.elevator.events.CarStateEvent;
 import zone.glueck.elevator.events.FloorsRequestEvent;
 import zone.glueck.elevator.events.RiderCueEvent;
 import zone.glueck.elevator.events.ServiceRequestEvent;
@@ -23,7 +24,9 @@ public class NonBlockingElevatorService implements ElevatorService {
 
     private final UserDefinedElevatorConfiguration configuration;
 
-    private final Collection<RiderCueListener> listeners = new CopyOnWriteArrayList<>();
+    private final Collection<RiderCueListener> riderCueListeners = new CopyOnWriteArrayList<>();
+
+    private final Collection<CarStateListener> carStateListeners = new CopyOnWriteArrayList<>();
 
     private final Queue<ServiceRequestEvent> pendingServiceRequests = new ConcurrentLinkedQueue<>();
 
@@ -40,6 +43,7 @@ public class NonBlockingElevatorService implements ElevatorService {
             if (car instanceof QueueCheckingDelayableCar queuedCar) {
                 queuedCar.setServiceRequestSupplier(pendingServiceRequests::poll);
                 queuedCar.setRiderCueEventConsumer(this::processRiderCue);
+                queuedCar.setCarStateEventConsumer(this::processCarState);
             }
         });
     }
@@ -79,12 +83,20 @@ public class NonBlockingElevatorService implements ElevatorService {
 
     @Override
     public void addRiderCueListener(@NonNull RiderCueListener riderCueListener) {
-        listeners.add(riderCueListener);
+        riderCueListeners.add(riderCueListener);
     }
 
     @Override
-    public void processRiderCue(@NonNull RiderCueEvent riderCueEvent) {
-        listeners.forEach(listener -> listener.handleRiderCue(riderCueEvent));
+    public void addCarStateListener(CarStateListener carStateListener) {
+        carStateListeners.add(carStateListener);
+    }
+
+    private void processRiderCue(@NonNull RiderCueEvent riderCueEvent) {
+        riderCueListeners.forEach(listener -> listener.handleRiderCue(riderCueEvent));
+    }
+
+    private void processCarState(@NonNull CarStateEvent carStateEvent) {
+        carStateListeners.forEach(listener -> listener.handleCarState(carStateEvent));
     }
 
     @Override

@@ -4,21 +4,17 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
-import zone.glueck.elevator.api.models.Configuration;
-import zone.glueck.elevator.api.models.RiderCue;
-import zone.glueck.elevator.api.models.RiderFloorsRequest;
-import zone.glueck.elevator.api.models.RiderServiceRequest;
+import zone.glueck.elevator.api.models.*;
+import zone.glueck.elevator.events.CarStateEvent;
 import zone.glueck.elevator.events.FloorsRequestEvent;
 import zone.glueck.elevator.events.RiderCueEvent;
 import zone.glueck.elevator.events.ServiceRequestEvent;
 import zone.glueck.elevator.service.ElevatorService;
 
 import java.io.IOException;
-import java.time.Duration;
 import java.util.UUID;
 
 @RestController
@@ -45,6 +41,15 @@ public class ElevatorController {
                 sseEmitter.send(riderCue, MediaType.APPLICATION_JSON);
             } catch (IOException ex) {
                 log.error("failed to send cue event: {}", riderCueEvent, ex);
+            }
+        });
+        elevatorService.addCarStateListener(carStateEvent -> {
+            log.info("publishing elevator state event: {}", carStateEvent);
+            final var carState = toModel(carStateEvent);
+            try {
+                sseEmitter.send(carState, MediaType.APPLICATION_JSON);
+            } catch (IOException ex) {
+                log.error("failed to send car event: {}", carStateEvent, ex);
             }
         });
     }
@@ -115,6 +120,14 @@ public class ElevatorController {
         riderCue.setServiceRequest(toModel(riderCueEvent.serviceRequestEvent()));
         riderCue.setCarName(riderCueEvent.carId());
         return riderCue;
+    }
+
+    private CarState toModel(CarStateEvent carStateEvent) {
+        final var carState = new CarState();
+        carState.setCarName(carStateEvent.carName());
+        carState.setStatus(carStateEvent.status());
+        carState.setCurrentFloor(carStateEvent.currentFloor());
+        return carState;
     }
 
 }

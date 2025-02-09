@@ -6,3 +6,6 @@ elevator:
   number-of-floors: 4
   elevators:
     - StandardCar
+    - StandardCar
+    - StandardCar
+    - ExpressCar

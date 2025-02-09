@@ -3,6 +3,27 @@ const useEffect = React.useEffect;
 const useRef = React.useRef;
 const useState = React.useState;
 
+function IndividualState({label, status, floor}) {
+    return (
+        <div className='elevator'>
+            <h5>{label}</h5>
+            <div>Status: {status}</div>
+            <div>Floor: {floor}</div>
+        </div>
+    );
+}
+
+function CarState({carStates}) {
+    return (
+        <div className='floor'>
+            <h3>Car Status</h3>
+            {
+                carStates.map(carState => <IndividualState label={carState.carName} status={carState.status} floor={carState.currentFloor} />)
+            }
+        </div>
+    );
+}
+
 function Elevator({name, riderCue, submitInput, clearButton}) {
 
     const floorsRef = useRef(null);
@@ -91,6 +112,7 @@ function App() {
     const [riderCues, setRiderCues] = useState([]);
     const [submittedRiderCues, setSubmittedRiderCues] = useState([]);
     const [inputs, setInputs] = useState([]);
+    const [carState, setCarStates] = useState([]);
 
     useEffect(() => {
         fetch('/configuration')
@@ -103,6 +125,7 @@ function App() {
             .then(conf => {
                 setNumberOfFloors(conf.totalFloors);
                 setElevators(conf.elevatorNames.map(en => ({key: en, name: en})));
+                setCarStates(conf.elevatorNames.map(en => ({carName: en, status: 'AVAILABLE', currentFloor: 0})));
             })
             .catch(err => alert(err));
     }, []);
@@ -117,6 +140,19 @@ function App() {
                     ...rcs,
                     data
                 ]));
+            } else if (data.status) {
+                setCarStates(cs => {
+                    let affectedCarIdx;
+                    for (let index = 0; index < cs.length; index++) {
+                        if (cs[index].carName === data.carName) {
+                            affectedCarIdx = index;
+                            break;
+                        }
+                    }
+                    const updatedCs = [ ...cs ];
+                    updatedCs[affectedCarIdx] = data;
+                    return updatedCs;
+                });
             } else {
                 console.log(data);
             }
@@ -195,11 +231,12 @@ function App() {
                 return correctFloor && notPreviouslySubmitted;
             });
         let associatedCue = associatedCues.length === 0 ? null : associatedCues[0];
-        floors.push(<Floor floorNumber={i} numberOfFloors={numberOfFloors} elevators={elevators} riderCue={associatedCue} submitInput={submitInput}/>);
+        floors.push(<Floor key={i} floorNumber={i} numberOfFloors={numberOfFloors} elevators={elevators} riderCue={associatedCue} submitInput={submitInput}/>);
     }
 
     return (
         <div>
+            <CarState carStates={carState} />
             {floors.reverse()}
         </div>
     );

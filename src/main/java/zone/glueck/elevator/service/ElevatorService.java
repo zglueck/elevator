@@ -20,7 +20,7 @@ public interface ElevatorService {
 
     void addRiderCueListener(@NonNull RiderCueListener riderCueListener);
 
-    void processRiderCue(@NonNull RiderCueEvent riderCueEvent);
+    void addCarStateListener(@NonNull CarStateListener carStateListener);
 
     UserDefinedElevatorConfiguration getConfiguration();
 

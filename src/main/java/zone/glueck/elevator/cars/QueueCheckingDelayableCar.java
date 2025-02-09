@@ -2,6 +2,7 @@ package zone.glueck.elevator.cars;
 
 import org.springframework.lang.Nullable;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
+import zone.glueck.elevator.events.CarStateEvent;
 import zone.glueck.elevator.events.RiderCueEvent;
 import zone.glueck.elevator.events.ServiceRequestEvent;
 
@@ -9,6 +10,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+
+import static zone.glueck.elevator.cars.QueueCheckingDelayableCar.State.MOVING;
 
 public abstract class QueueCheckingDelayableCar implements Car {
 
@@ -21,6 +24,9 @@ public abstract class QueueCheckingDelayableCar implements Car {
 
     @Nullable
     protected Consumer<RiderCueEvent> riderCueEventConsumer;
+
+    @Nullable
+    protected Consumer<CarStateEvent> carStateEventConsumer;
 
     protected State state = State.AVAILABLE;
 
@@ -46,7 +52,7 @@ public abstract class QueueCheckingDelayableCar implements Car {
     protected void moveTo(int nextFloor) {
         final var numberOfFloors = Math.abs(nextFloor - currentFloor);
         currentFloor = nextFloor;
-        changeState(State.MOVING);
+        changeState(MOVING);
         taskScheduler.schedule(
                 this::arrived,
                 Instant.now().plus(PER_FLOOR_MOVE_DURATION.multipliedBy(numberOfFloors))
@@ -72,6 +78,11 @@ public abstract class QueueCheckingDelayableCar implements Car {
      */
     protected void changeState(State state) {
         this.state = state;
+
+        if (carStateEventConsumer != null) {
+            carStateEventConsumer.accept(new CarStateEvent(getCarId(), this.state.name(), currentFloor));
+        }
+
         if (state == State.AVAILABLE && serviceRequestSupplier != null) {
             final ServiceRequestEvent serviceRequestEvent = serviceRequestSupplier.get();
             if (serviceRequestEvent != null) {
@@ -98,6 +109,15 @@ public abstract class QueueCheckingDelayableCar implements Car {
 
     public void setRiderCueEventConsumer(@Nullable Consumer<RiderCueEvent> riderCueEventConsumer) {
         this.riderCueEventConsumer = riderCueEventConsumer;
+    }
+
+    @Nullable
+    public Consumer<CarStateEvent> getCarStateEventConsumer() {
+        return carStateEventConsumer;
+    }
+
+    public void setCarStateEventConsumer(@Nullable Consumer<CarStateEvent> carStateEventConsumer) {
+        this.carStateEventConsumer = carStateEventConsumer;
     }
 
     public State getState() {

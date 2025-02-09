@@ -3,8 +3,6 @@ spring:
     name: elevator
 
 elevator:
-  number-of-floors: 10
+  number-of-floors: 4
   elevators:
-    - StandardCar
-    - StandardCar
     - StandardCar

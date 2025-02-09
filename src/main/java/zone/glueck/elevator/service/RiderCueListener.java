@@ -5,6 +5,6 @@ import zone.glueck.elevator.events.RiderCueEvent;
 
 public interface RiderCueListener {
 
-    boolean handleRiderCue(@NonNull RiderCueEvent riderCueEvent);
+    void handleRiderCue(@NonNull RiderCueEvent riderCueEvent);
 
 }

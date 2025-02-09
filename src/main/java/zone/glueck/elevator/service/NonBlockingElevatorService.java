@@ -2,29 +2,26 @@ package zone.glueck.elevator.service;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.lang.NonNull;
 import org.springframework.scheduling.annotation.Async;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.stereotype.Service;
+import zone.glueck.elevator.cars.QueueCheckingDelayableCar;
+import zone.glueck.elevator.configs.UserDefinedElevatorConfiguration;
 import zone.glueck.elevator.cars.Car;
-import zone.glueck.elevator.cars.StandardCar;
 import zone.glueck.elevator.events.FloorsRequestEvent;
 import zone.glueck.elevator.events.RiderCueEvent;
 import zone.glueck.elevator.events.ServiceRequestEvent;
 
-import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 @Service
-@Async
 public class NonBlockingElevatorService implements ElevatorService {
 
     private static final Logger log = LoggerFactory.getLogger(NonBlockingElevatorService.class);
 
-    private final ElevatorServiceConfiguration configuration;
+    private final UserDefinedElevatorConfiguration configuration;
 
     private final Collection<RiderCueListener> listeners = new CopyOnWriteArrayList<>();
 
@@ -32,30 +29,19 @@ public class NonBlockingElevatorService implements ElevatorService {
 
     private final Collection<Car> cars = new ArrayList<>();
 
-    @Autowired
-    public NonBlockingElevatorService(ElevatorServiceConfiguration configuration) {
+    public NonBlockingElevatorService(
+            UserDefinedElevatorConfiguration configuration,
+            Collection<Car> cars
+    ) {
         this.configuration = configuration;
+        this.cars.addAll(cars);
 
-        final var threadPool = new ThreadPoolTaskScheduler();
-        threadPool.setPoolSize(1);
-        threadPool.setThreadNamePrefix("ElevatorService");
-        threadPool.initialize();
-
-        int counter = 1;
-
-        for (String elevatorType : configuration.getElevators()) {
-            if ("StandardCar".equals(elevatorType)) {
-                cars.add(
-                        new StandardCar(
-                                threadPool,
-                                pendingServiceRequests::poll,
-                                () -> Duration.ofSeconds(3L),
-                                this::processRiderCue,
-                                "Car " + counter++
-                        )
-                );
+        this.cars.forEach(car -> {
+            if (car instanceof QueueCheckingDelayableCar queuedCar) {
+                queuedCar.setServiceRequestSupplier(pendingServiceRequests::poll);
+                queuedCar.setRiderCueEventConsumer(this::processRiderCue);
             }
-        }
+        });
     }
 
     @Override
@@ -69,6 +55,7 @@ public class NonBlockingElevatorService implements ElevatorService {
     }
 
     @Override
+    @Async(value = "singleThreadedServiceScheduler")
     public void processServiceRequest(@NonNull ServiceRequestEvent serviceRequestEvent) {
         log.info("thread: {}", Thread.currentThread().getName());
         for (Car car : cars) {
@@ -80,6 +67,7 @@ public class NonBlockingElevatorService implements ElevatorService {
     }
 
     @Override
+    @Async(value = "singleThreadedServiceScheduler")
     public void processFloorsRequest(@NonNull FloorsRequestEvent floorsRequestEvent) {
         for (Car car : cars) {
             if (car.processFloorsRequest(floorsRequestEvent)) {
@@ -96,17 +84,11 @@ public class NonBlockingElevatorService implements ElevatorService {
 
     @Override
     public void processRiderCue(@NonNull RiderCueEvent riderCueEvent) {
-        final var listenersToRemove = new HashSet<RiderCueListener>();
-        listeners.forEach(listener -> {
-            if (listener.handleRiderCue(riderCueEvent)) {
-                listenersToRemove.add(listener);
-            }
-        });
-        listeners.removeAll(listenersToRemove);
+        listeners.forEach(listener -> listener.handleRiderCue(riderCueEvent));
     }
 
     @Override
-    public ElevatorServiceConfiguration getConfiguration() {
+    public UserDefinedElevatorConfiguration getConfiguration() {
         return null;
     }
 }

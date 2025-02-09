@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -17,21 +18,35 @@ import zone.glueck.elevator.events.ServiceRequestEvent;
 import zone.glueck.elevator.service.ElevatorService;
 
 import java.io.IOException;
-import java.util.Map;
+import java.time.Duration;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 @RestController
 public class ElevatorController {
 
     private static final Logger log = LoggerFactory.getLogger(ElevatorController.class);
 
-    private final Map<UUID, SseEmitter> emitters = new ConcurrentHashMap<>();
-
     private final ElevatorService elevatorService;
 
-    public ElevatorController(ElevatorService elevatorService) {
+    private final SseEmitter sseEmitter;
+
+    public ElevatorController(ElevatorService elevatorService) throws IOException {
         this.elevatorService = elevatorService;
+        this.sseEmitter = new SseEmitter(-1L);
+
+        initPushNotification();
+    }
+
+    private void initPushNotification() {
+        elevatorService.addRiderCueListener(riderCueEvent -> {
+            log.info("publishing rider cue event: {}", riderCueEvent);
+            final var riderCue = toModel(riderCueEvent);
+            try {
+                sseEmitter.send(riderCue, MediaType.APPLICATION_JSON);
+            } catch (IOException ex) {
+                log.error("failed to send cue event: {}", riderCueEvent, ex);
+            }
+        });
     }
 
     @GetMapping("/configuration")
@@ -66,31 +81,9 @@ public class ElevatorController {
         return riderFloorsRequest;
     }
 
-    @GetMapping("/service/{serviceId}/events")
-    public SseEmitter registerServiceListener(@PathVariable("serviceId") UUID id) {
-        final var emitter = new SseEmitter();
-        emitters.put(id, emitter);
-        elevatorService.addRiderCueListener(riderCueEvent -> {
-            if (id.equals(riderCueEvent.serviceRequestEvent().id())) {
-                final var riderCue = toModel(riderCueEvent);
-
-                final var existingEmitter = emitters.remove(id);
-                if (existingEmitter == null) {
-                    log.error("failed to find emitter for: {}", id);
-                    return false;
-                }
-
-                try {
-                    existingEmitter.send(riderCue, MediaType.APPLICATION_JSON);
-                    existingEmitter.complete();
-                } catch (IOException ex) {
-                    log.error("failed to send cue event: {}", riderCueEvent, ex);
-                }
-                return true;
-            }
-            return false;
-        });
-        return emitter;
+    @GetMapping("/service/events")
+    public SseEmitter registerServiceListener() {
+        return sseEmitter;
     }
 
     private ServiceRequestEvent toEvent(RiderServiceRequest riderServiceRequest) {
@@ -120,7 +113,7 @@ public class ElevatorController {
     private RiderCue toModel(RiderCueEvent riderCueEvent) {
         final var riderCue = new RiderCue();
         riderCue.setServiceRequest(toModel(riderCueEvent.serviceRequestEvent()));
-        riderCue.setCarName("");
+        riderCue.setCarName(riderCueEvent.carId());
         return riderCue;
     }
 

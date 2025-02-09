@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Elevator Simulator</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+
+    <!-- Don't use this in production: -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="app.js" type="text/babel"></script>
+    <style>
+        .floor {
+            border-width: thin;
+            border-style: solid;
+            border-radius: 4px;
+            border-color: darkslategray;
+            margin: 2px;
+            width: 90%;
+            height: 206px;
+            padding: 2px;
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between;
+            align-items: center;
+            
+        }
+        .elevator {
+            border-width: thin;
+            border-style: solid;
+            border-radius: 4px;
+            border-color: darkslategray;
+            margin: 2px;
+            width: 200px;
+            height: 200px;
+            padding: 2px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .elevator-components {
+            width: 192px;
+        }
+    </style>
+  </head>
+  <body>
+    <div id="main"></div>
+  </body>
+</html>

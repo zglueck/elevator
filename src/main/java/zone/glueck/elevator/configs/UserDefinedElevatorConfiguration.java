@@ -1,17 +1,15 @@
-package zone.glueck.elevator.service;
+package zone.glueck.elevator.configs;
 
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotEmpty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.scheduling.annotation.EnableAsync;
 
 import java.util.List;
 
 @Configuration
-@EnableAsync
 @ConfigurationProperties(prefix = "elevator")
-public class ElevatorServiceConfiguration {
+public class UserDefinedElevatorConfiguration {
 
     @Min(0)
     private int numberOfFloors;

@@ -1,6 +1,7 @@
 package zone.glueck.elevator.service;
 
 import org.springframework.lang.NonNull;
+import zone.glueck.elevator.configs.UserDefinedElevatorConfiguration;
 import zone.glueck.elevator.events.FloorsRequestEvent;
 import zone.glueck.elevator.events.RiderCueEvent;
 import zone.glueck.elevator.events.ServiceRequestEvent;
@@ -21,6 +22,6 @@ public interface ElevatorService {
 
     void processRiderCue(@NonNull RiderCueEvent riderCueEvent);
 
-    ElevatorServiceConfiguration getConfiguration();
+    UserDefinedElevatorConfiguration getConfiguration();
 
 }

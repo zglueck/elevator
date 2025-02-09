@@ -1,9 +1,10 @@
 package zone.glueck.elevator.cars;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.lang.NonNull;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import zone.glueck.elevator.events.FloorsRequestEvent;
-import zone.glueck.elevator.events.RiderCueEvent;
 import zone.glueck.elevator.events.ServiceRequestEvent;
 import zone.glueck.elevator.utils.Direction;
 
@@ -12,25 +13,26 @@ import java.time.Instant;
 import java.util.Comparator;
 import java.util.Objects;
 import java.util.TreeMap;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
 
+/**
+ * A "Standard" Elevator car that accepts additional service requests as long as they are for the same direction and
+ * haven't been passed by yet.
+ */
 public class StandardCar extends QueueCheckingDelayableCar {
+
+    private static final Logger log = LoggerFactory.getLogger(StandardCar.class);
 
     private final String carId;
 
-    private volatile Direction direction;
+    private Direction direction;
 
-    private volatile TreeMap<Integer, StopReasonContainer> stops;
+    private TreeMap<Integer, StopReasonContainer> stops;
 
     public StandardCar(
             ThreadPoolTaskScheduler taskScheduler,
-            Supplier<ServiceRequestEvent> serviceConsumer,
-            Supplier<Duration> perFloorDurationDelay,
-            Consumer<RiderCueEvent> riderCueEventConsumer,
             String carId
     ) {
-        super(taskScheduler, serviceConsumer, perFloorDurationDelay, riderCueEventConsumer);
+        super(taskScheduler);
         this.carId = carId;
     }
 
@@ -40,32 +42,36 @@ public class StandardCar extends QueueCheckingDelayableCar {
     }
 
     @Override
-    public synchronized boolean processServiceRequest(@NonNull ServiceRequestEvent serviceRequestEvent) {
+    public boolean processServiceRequest(@NonNull ServiceRequestEvent serviceRequestEvent) {
 
         if (state == State.AVAILABLE) {
+            log.info("car: {} accepting: {}", getCarId(), serviceRequestEvent);
             direction = serviceRequestEvent.direction();
             final Comparator<Integer> comparator = direction == Direction.ASCENDING ? Comparator.naturalOrder() : Comparator.reverseOrder();
             stops = new TreeMap<>(comparator);
             stops.put(serviceRequestEvent.originationFloor(), new StopReasonContainer(serviceRequestEvent));
-            startMoving(stops.firstKey());
+            moveTo(stops.firstKey());
             return true;
         }
 
         if (state == State.MOVING || state == State.WAITING) {
             final var isOnTheWay = direction == Direction.DESCENDING ?
-                    currentFloor >= serviceRequestEvent.originationFloor() :
-                    currentFloor <= serviceRequestEvent.originationFloor();
+                    currentFloor > serviceRequestEvent.originationFloor() :
+                    currentFloor < serviceRequestEvent.originationFloor();
             if (direction == serviceRequestEvent.direction() && isOnTheWay) {
+                log.info("car: {} accepting: {} even though moving", getCarId(), serviceRequestEvent);
                 stops.put(serviceRequestEvent.originationFloor(), new StopReasonContainer(serviceRequestEvent));
                 return true;
             }
         }
 
+        log.info("car: {} rejecting: {}", getCarId(), serviceRequestEvent);
+
         return false;
     }
 
     @Override
-    public synchronized boolean processFloorsRequest(@NonNull FloorsRequestEvent floorsRequestEvent) {
+    public boolean processFloorsRequest(@NonNull FloorsRequestEvent floorsRequestEvent) {
         final var potentialServiceRequest = stops.values().stream()
                 .map(StopReasonContainer::serviceRequestEvent)
                 .filter(Objects::nonNull)
@@ -87,13 +93,14 @@ public class StandardCar extends QueueCheckingDelayableCar {
             }
         }
 
-        startMoving(stops.firstKey());
+        moveTo(stops.firstKey());
 
         return true;
     }
 
     @Override
-    protected synchronized void arrived() {
+    protected void arrived() {
+        log.info("car: {} arrived at floor: {}", getCarId(), currentFloor);
         final var currentReason = stops.get(currentFloor);
         if (currentReason.serviceRequestEvent() == null) {
             // just letting people off
@@ -107,7 +114,7 @@ public class StandardCar extends QueueCheckingDelayableCar {
             changeState(State.WAITING);
 
             taskScheduler.schedule(
-                    () -> startMoving(stops.firstKey()),
+                    () -> moveTo(stops.firstKey()),
                     Instant.now().plus(Duration.ofSeconds(3L))
             );
         } else {
@@ -116,6 +123,10 @@ public class StandardCar extends QueueCheckingDelayableCar {
         }
     }
 
+    /**
+     * A container for holding whether a floor has an associated service request, or is just a destination.
+     * @param serviceRequestEvent
+     */
     private record StopReasonContainer(ServiceRequestEvent serviceRequestEvent) {
 
     }

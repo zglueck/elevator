@@ -14,6 +14,8 @@ A simple **and not safety approved** elevator simulator with an interactive UI.
 2. Open Browser
 3. Navigate to [localhost](http://localhost:8080)
 
+![image](https://github.com/user-attachments/assets/82152d2a-b8d8-4c33-b5c6-8cae7b32e663)
+
 ### Configuration
 
 Specify the number of floors and the elevator types (currently only standard and express) in the `application.yaml`:
